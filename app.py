@@ -70,6 +70,10 @@ def load_models():
         if os.path.exists(f'{model_path}/model_comparison.pkl'):
             models['comparison'] = pd.read_pickle(f'{model_path}/model_comparison.pkl')
         
+        # Load test scores (performance metrics from test data)
+        if os.path.exists(f'{model_path}/test_scores.pkl'):
+            models['test_scores'] = joblib.load(f'{model_path}/test_scores.pkl')
+        
         if os.path.exists(f'{model_path}/apriori_rules.pkl'):
             models['apriori_rules'] = pd.read_pickle(f'{model_path}/apriori_rules.pkl')
             
@@ -530,9 +534,27 @@ def render_logistic_regression_tab(models):
         fig.update_layout(height=400)
         st.plotly_chart(fig, use_container_width=True)
     
-    # Model performance
-    if 'comparison' in models:
+    # Model performance from test data
+    if 'test_scores' in models and 'Logistic Regression' in models['test_scores']:
+        st.subheader("Model Performance (Test Data)")
+        metrics = models['test_scores']['Logistic Regression']
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Accuracy", f"{metrics['accuracy']:.4f}")
+        with col2:
+            st.metric("Precision", f"{metrics['precision']:.4f}")
+        with col3:
+            st.metric("Recall", f"{metrics['recall']:.4f}")
+        with col4:
+            st.metric("F1-Score", f"{metrics['f1_score']:.4f}")
+        
+        if 'roc_auc' in metrics:
+            st.metric("ROC-AUC Score", f"{metrics['roc_auc']:.4f}")
+    elif 'comparison' in models:
+        # Fallback to old comparison data
         st.subheader("Model Performance")
+        st.warning("⚠️ Showing cached metrics. Run notebook to generate test scores.")
         metrics = models['comparison'].loc['Logistic Regression']
         
         col1, col2, col3, col4 = st.columns(4)
@@ -585,9 +607,27 @@ def render_naive_bayes_tab(models):
         fig.update_layout(barmode='group', height=400, title='Feature Variances by Class')
         st.plotly_chart(fig, use_container_width=True)
     
-    # Model performance
-    if 'comparison' in models:
+    # Model performance from test data
+    if 'test_scores' in models and 'Naive Bayes' in models['test_scores']:
+        st.subheader("Model Performance (Test Data)")
+        metrics = models['test_scores']['Naive Bayes']
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Accuracy", f"{metrics['accuracy']:.4f}")
+        with col2:
+            st.metric("Precision", f"{metrics['precision']:.4f}")
+        with col3:
+            st.metric("Recall", f"{metrics['recall']:.4f}")
+        with col4:
+            st.metric("F1-Score", f"{metrics['f1_score']:.4f}")
+        
+        if 'roc_auc' in metrics:
+            st.metric("ROC-AUC Score", f"{metrics['roc_auc']:.4f}")
+    elif 'comparison' in models:
+        # Fallback to old comparison data
         st.subheader("Model Performance")
+        st.warning("⚠️ Showing cached metrics. Run notebook to generate test scores.")
         metrics = models['comparison'].loc['Naïve Bayes']
         
         col1, col2, col3, col4 = st.columns(4)
@@ -650,9 +690,27 @@ def render_decision_tree_tab(models):
     with col3:
         st.metric("Min Samples Leaf", model.min_samples_leaf)
     
-    # Model performance
-    if 'comparison' in models:
+    # Model performance from test data
+    if 'test_scores' in models and 'Decision Tree' in models['test_scores']:
+        st.subheader("Model Performance (Test Data)")
+        metrics = models['test_scores']['Decision Tree']
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Accuracy", f"{metrics['accuracy']:.4f}")
+        with col2:
+            st.metric("Precision", f"{metrics['precision']:.4f}")
+        with col3:
+            st.metric("Recall", f"{metrics['recall']:.4f}")
+        with col4:
+            st.metric("F1-Score", f"{metrics['f1_score']:.4f}")
+        
+        if 'roc_auc' in metrics:
+            st.metric("ROC-AUC Score", f"{metrics['roc_auc']:.4f}")
+    elif 'comparison' in models:
+        # Fallback to old comparison data
         st.subheader("Model Performance")
+        st.warning("⚠️ Showing cached metrics. Run notebook to generate test scores.")
         metrics = models['comparison'].loc['Decision Tree']
         
         col1, col2, col3, col4 = st.columns(4)
@@ -738,13 +796,28 @@ def render_comparison_tab(models):
     """Render model comparison"""
     st.header("📊 Model Comparison")
     
-    if 'comparison' not in models:
+    # Use test_scores if available, otherwise fallback to comparison
+    if 'test_scores' in models:
+        st.info("✅ Showing performance metrics from **Test Data**")
+        # Convert test_scores dict to DataFrame
+        comparison_data = {}
+        for model_name, scores in models['test_scores'].items():
+            comparison_data[model_name] = {
+                'Accuracy': scores.get('accuracy', 0),
+                'Precision': scores.get('precision', 0),
+                'Recall': scores.get('recall', 0),
+                'F1-Score': scores.get('f1_score', 0),
+                'ROC-AUC': scores.get('roc_auc', None)
+            }
+        comparison_df = pd.DataFrame(comparison_data).T
+    elif 'comparison' in models:
+        st.warning("⚠️ Showing cached metrics. Run notebook to generate test scores.")
+        comparison_df = models['comparison']
+    else:
         st.warning("Model comparison data not found. Please run the notebook first.")
         return
     
-    comparison_df = models['comparison']
-    
-    st.subheader("Performance Metrics")
+    st.subheader("Performance Metrics (Test Data)")
     st.dataframe(comparison_df.style.highlight_max(axis=0, color='lightgreen'), use_container_width=True)
     
     # Visualization
