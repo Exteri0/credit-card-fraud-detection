@@ -820,6 +820,43 @@ def render_comparison_tab(models):
     st.subheader("Performance Metrics (Test Data)")
     st.dataframe(comparison_df.style.highlight_max(axis=0, color='lightgreen'), use_container_width=True)
     
+    # Tuning Impact
+    if os.path.exists('models/tuning_comparison.pkl'):
+        st.markdown("---")
+        st.subheader("🚀 Impact of Tuning (Overfitting Reduction)")
+        tuning_df = pd.read_pickle('models/tuning_comparison.pkl')
+        
+        # Melt for visualization
+        gap_data = tuning_df[['Model', 'Gap (Before)', 'Gap (After)']].melt(
+            id_vars='Model', 
+            var_name='Stage', 
+            value_name='Gap (Train - Test)'
+        )
+        
+        f1_data = tuning_df[['Model', 'Test F1 (Before)', 'Test F1 (After)']].melt(
+            id_vars='Model', 
+            var_name='Stage', 
+            value_name='Test F1 Score'
+        )
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+             st.write("**Overfitting Gap (Lower is Better)**")
+             fig_gap = px.bar(gap_data, x='Model', y='Gap (Train - Test)', color='Stage', barmode='group',
+                              color_discrete_map={'Gap (Before)': '#e74c3c', 'Gap (After)': '#2ecc71'})
+             fig_gap.update_layout(height=400)
+             st.plotly_chart(fig_gap, use_container_width=True)
+             
+        with col2:
+             st.write("**Test F1 Score (Higher is Better)**")
+             fig_f1 = px.bar(f1_data, x='Model', y='Test F1 Score', color='Stage', barmode='group',
+                             color_discrete_map={'Test F1 (Before)': '#95a5a6', 'Test F1 (After)': '#3498db'})
+             fig_f1.update_layout(height=400)
+             st.plotly_chart(fig_f1, use_container_width=True)
+             
+        st.info("💡 **Gap Reduction** shows how much we reduced overfitting. **Test F1 Increase** shows actual performance gain on real data.")
+
     # Visualization
     col1, col2 = st.columns(2)
     
